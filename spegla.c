@@ -731,7 +731,7 @@ check_minfree(int minfree, char *path)
 #ifdef ULTRIX
 	if ((f.fd_req.bfreen * 1024) < minfree)
 #else
-	if ((f.f_bsize * f.f_bavail) < minfree)
+	if (((long long)f.f_bsize * f.f_bavail) < minfree)
 #endif
 		e_errx(1, "%s: Not enough space left", path);
 
@@ -1004,6 +1004,7 @@ expand_with_str(const char *name, char **val, const char *str, int show)
 		}
 		buf[i] = p[j];
 	}
+	buf[i] = '\0';
 	*val = buf;
 ret:
 	if (show)

@@ -8,21 +8,14 @@ HAVE_STRLCPY?= yes
 
 PROG		 = spegla
 SRCS		 = jftp.c parserow.c spegla.c tgetopt.c container.c spf_util.c	\
-			   que_syms.c e_err.c
+			   que_syms.c e_err.c \
+			   regcomp.c regerror.c regexec.c regfree.c
 .if !(defined(HAVE_STRLCPY) && ${HAVE_STRLCPY} == "yes")
 SRCS		+= strlcpy.c
 CPPFLAGS	+= -DNO_STRLCPY
 .endif
 
 MAN			 = spegla.1
-
-FILES		 = spegla.sh spegla.conf
-FILESDIR	 = ${PREFIX}/share/examples/spegla
-
-filesinstall:: ${PREFIX}/share/examples/spegla
-
-${PREFIX}/share/examples/spegla: 
-	mkdir -p ${PREFIX}/share/examples/spegla
 
 #WARNS		 = 2
 CFLAGS		+= -Wall 
@@ -73,3 +66,4 @@ tgetopt.c: ${.CURDIR}/../tgetopt/tgetopt.c
 	cp ${.CURDIR}/../tgetopt/tgetopt.c tgetopt.c
 .endif
 
+.PATH:	${.CURDIR}/regex

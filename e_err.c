@@ -115,6 +115,7 @@ e_buf_format(char *buf, size_t len, const char *name, char *error,
 	}
 
 	res = vsnprintf(p, len, fmt, args);
+	if (res >= len) res = len - 1;
 	len -= res;
 	p += res;
 
