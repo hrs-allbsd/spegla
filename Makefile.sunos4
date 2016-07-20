@@ -1,0 +1,32 @@
+#  $Id: Makefile.sunos4,v 1.3 1999/05/08 08:34:48 jens Exp $
+
+CFLAGS= -g -c -Wall
+
+spegla: spegla.o jftp.o parserow.o readconfig.o cl_que.o spf_util.o fnmatch.o
+	gcc -o spegla spegla.o jftp.o parserow.o readconfig.o \
+		cl_que.o spf_util.o fnmatch.o
+
+parserow.o: parserow.c
+	gcc ${CFLAGS} parserow.c -DSunOS
+
+readconfig.o: readconfig.c
+	gcc ${CFLAGS} readconfig.c -DSunOS
+
+jftp.o: jftp.c
+	gcc ${CFLAGS} jftp.c -DSunOS
+
+spegla.o: spegla.c
+	gcc ${CFLAGS} spegla.c  -DSunOS
+
+cl_que.o: cl_que.c
+	gcc ${CFLAGS} cl_que.c  -DSunOS
+
+spf_util.o: spf_util.c
+	gcc ${CFLAGS} spf_util.c  -DSunOS
+
+fnmatch.o: fnmatch.c
+	gcc ${CFLAGS} fnmatch.c  -DSunOS
+
+clean:
+	/bin/rm -f *.o spegla
+

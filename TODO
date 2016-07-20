@@ -1,0 +1,6 @@
+
+* Make use of ls -lagR on the ftp server
+
+* Use autoconf
+
+* mkdir-bug ??

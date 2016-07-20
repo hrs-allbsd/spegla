@@ -1,0 +1,20 @@
+#  $Id: Makefile.osf1,v 1.2 1998/07/13 17:27:32 jens Exp $
+
+spegla: spegla.o jftp.o parserow.o readconfig.o
+	gcc -o spegla spegla.o jftp.o parserow.o readconfig.o
+
+parserow.o: parserow.c parserow.h
+	gcc -c -Wall parserow.c -DOSF1
+
+readconfig.o: readconfig.c readconfig.h
+	gcc -c -Wall readconfig.c -DOSF1
+
+jftp.o: jftp.c jftp.h
+	gcc -c -Wall jftp.c -DOSF1
+
+spegla.o: spegla.c jftp.h spegla.h parserow.h readconfig.h
+	gcc -c -Wall spegla.c  -DOSF1
+
+clean:
+	/bin/rm -f *.o spegla
+

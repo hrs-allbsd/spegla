@@ -1,0 +1,48 @@
+# $Id: mirrorconf,v 1.1 1999/07/15 18:13:25 jens Exp $
+# This is an example config file to be used together with mirror.sh
+[common]
+# This section provides default values for alla other sections if
+# spegla is started in the same way as in mirror.sh
+
+# compat with other versions
+version		= 1.1		
+
+username	= anonymous
+password	= someone@somewhere.com
+
+# Keep quiet
+showconf	= no
+warnoverrides	= no
+
+# don't run if not one at least Meg is available on disk
+minfree		= 1048576	
+
+# behave good with the "hej -> .1" links
+# you probably want these, if you don't understand either remove _both_
+# rows or keep them as they are.
+skip            = /\.[0-9][0-9]*
+treatasdirdest  = \./\.[0-9][0-9]*
+
+
+[gnu]
+localdir	= /misc/ftp/pub/unix/gnu
+remotedir	= /pub/gnu
+host		= prep.ai.mit.edu
+maxdelete	= 400
+skip		= ^/MailingListArchives.*
+
+[bind]
+localdir	= /misc/ftp/pub/unix/dns/bind
+remotedir	= /pub/bind
+host		= ftp.vix.com
+
+[tools]
+localdir	= /misc/ftp/pub/unix/dns/tools
+remotedir	= /networking/ip/dns
+host		= ftp.is.co.za
+
+[host]
+localdir	= /misc/ftp/pub/unix/dns/tools/host
+remotedir	= /pub/network
+host		= ftp.nikhef.nl
+skip		= ^/\.oldversion

@@ -1,0 +1,63 @@
+/*$Id: README,v 1.20 2000/03/24 16:15:50 jens Exp $*/
+
+SPEGLA 1.1
+
+Spegla is a mirror program for FTP sites.
+
+Spegla was written because I couldn't find any fast mirroring
+program for big mirrors. It makes a complete mirror of a FTP area.
+
+
+COMPILE:
+
+If you compile under Free/Net/OpenBSD make should do it. If you
+compile under some other OS you have to do:
+"make -f Makefile.<your system>"
+where <your system> can be one of linux, solaris or ultrix.  If it
+doesn't compile anyway I have probably forgot to update the makefile
+for that system. There are other makefiles too but they have not been
+updated since last version of spegla and will not work.
+
+If youre OS isn't listed above you need to hack a bit. When it
+works, I would be gratefull if you mail me the changes and the
+makefile so I can include it.
+
+The program was initially developed under NetBSD 1.3 and tested on
+a Digital VAX 11/785 running NetBSD 1.3. The continued development
+has been done primary on a Digital AlphaPC 164SX running NetBSD
+1.4.  It should work on the other OS:es to, but if it doesn't please
+tell me.
+
+
+USAGE:
+
+Consult the nice manpage.
+
+DOWNLOADING:
+
+Spegla is available from:
+ftp://ftp.luth.se/pub/unix/mirror/
+ftp://subzero.campus.luth.se/pub/spegla/
+
+
+PROBLEMS:
+
+If you have any problems with spegla or find bugs mail me and I'll
+try to help you or correct bugs.
+
+
+AUTHOR:
+
+Spegla is written by Jens A Nilsson <jnilsson@ludd.luth.se> and is
+released under BSD style license.
+
+If you find the program useful and use it regularly send me a
+postcard (you get my address by fingering jens@subzero.campus.luth.se)
+or just send an email to jnilsson@ludd.luth.se.
+
+
+THANKS:
+
+Thanks to lots of people. If you feel you need a special thank you
+just send me an email and I'll send you a special thank you only
+for you. :-)

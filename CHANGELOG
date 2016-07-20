@@ -1,0 +1,41 @@
+Spegla 1.1p4
+~~~~~~~~~~~~
+
+changes since 1.1:
+* Added --url option to download a directory hierarchy of a ftp-URL
+* Fixes descriptor leakage when errors downloading files occurs 
+* Fixed bug with space in directory names
+* Download files to another name first and then rename them.
+* Fixed problem with permission not getting updated on directories.
+* Prints average downloadrate together with the other stats.
+* Works with latest version of wu-ftpd.
+* Prints stats corectly under Solaris.
+* Applied patch from Makoto MATSUSHITA <matusita@jp.freebsd.org> that
+  closes down data connection to ftp-server completely before reading
+  status from ftp-server. Thank you.
+
+changes since 1.04:
+* Uses some other data structures in some queues.
+* Version needs to be declared to 1.1 in config file
+* Uses regex(3) to match files to skip
+* Uses a new way to read parameters.
+* Lots of new options
+* Cleanup in source and possibly some bugs caught by that.
+
+changes since 1.03:
+* Fixes bug with to files of the same name but differing types.
+* Passive ftp is optional now.
+
+changes since 1.0:
+* Added port option for config file.
+* Handles multiline replies better, thanks Jakob.
+
+changes since 0.99:
+* A bug concerning removal of symbolic links fixed.
+
+changes since 0.93:
+* lockfile, relogin works on first login, appends to logfile.
+* See readme for details on lockfile.
+* New syntax for skipping files and directories.
+* Uses passive ftp instead.
+* Nice man page

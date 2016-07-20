@@ -1,0 +1,22 @@
+version   = 1.1
+showconf  = yes
+fastsync  = yes
+localdir  = /u0/jens/spegel
+remotedir = /pub/NetBSD-cvs
+username  = anonymous
+password  = jnilsson@ludd.luth.se
+host      = ftp.netbsd.ORG
+maxdelete = 0
+timeout   = 120
+retries   = 300       # busy ftp server and lots of files              
+                      # takes lots of hours to complete   
+                      # and don't want to quit when we are
+                      # almost finished.
+retrytime = 120       # if network goes down don't consume
+                      # all retries to fast
+logfile   = netbsd.org.log
+#logfile   = stderr
+lockfile  = netbsd.org.lock
+# Allow links like "hej -> .1"
+skip      = /\.[0-9][0-9]*
+treatasdirdest = \./\.[0-9][0-9]*

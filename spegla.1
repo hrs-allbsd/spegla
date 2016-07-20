@@ -1,0 +1,216 @@
+.\"
+.\" Copyright (c) 1997, 1998, 1999
+.\"      Jens A. Nilsson, jnilsson@ludd.luth.se. All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+.\" OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY 
+.\" DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd May 30, 1999
+.Dt SPEGLA 1
+.Os
+.Sh NAME
+.Nm spegla
+.Nd mirror ftp sites
+.Sh SYNOPSIS
+.Nm
+.Op Ar lots of options
+.Sh DESCRIPTION
+.Nm
+is a mirror program for FTP sites.
+.Pp
+Options on the command line is read from left to right the last
+option of a certain type overrides a previous of the same type. If
+the
+.Fl "f"
+option together with a file name as argument is found, parameters will
+be read from that file before continuing with the command line
+again. Options specified on the command line either begins with
+.Ql "\-\-"
+a la getopt_long or a single dash like getopt. The options in the
+config file are as follows:
+.Bl -tag -width -enum Ds
+.It Cm configfile No or Fl f Aq "config file"
+Read parameters from file
+.It Cm section No or Fl s Aq section
+Specifies which section to read parameter from. If not specified 
+the
+.Ql "[]"
+section will be read or in a file where no
+.Ql "[]"
+is found, the whole file.
+.It Cm url Aq "ftp URL"
+The ftp URL is on the form
+.Ql "<type>://[<user>[:<password>]@]<host>[:<port>][/<path>]" .
+If this option is found no other options are required. Localdir
+will be set by default to current directory.
+If
+.Ql "user"
+or
+.Ql "password"
+is not specified they will be set by default to
+.Ql "anonymous"
+respective
+.Ql "${USER}@" .
+.It Cm localdir No or Fl l Aq "local directory"
+Where in the file system is the mirror located.
+.br
+This option is required.
+.It Cm remotedir No or Fl r Aq "remote directory"
+What remote directory to mirror.
+.br
+This option is required.
+.It Cm username No or Fl u Aq "user name"
+User to log in as i.e. anonymous.
+.br
+This option is required.
+.It Cm password No or Fl p Aq password
+Password to use i.e. you email address.
+.br
+This option is required.
+.It Cm host No or Fl h Aq hostname
+Ftp server to use.
+.br
+This option is required.
+.It Cm version No or Fl v Aq version
+Need to be defined to 1.1 if config is being read from a file.
+.br
+This option is required.
+.It Cm warnoverrides No or Fl w Aq "yes | no"
+Spegla warns if an option is overridden this option
+can turn that off.
+.br
+Defaults to yes.
+.It Cm skip Aq "reg exp"
+Files or directories remote or local matching this regular
+expression will not be touched. Symlinks pointing to a file
+that would match this expression are skipped too. Filenames
+are absolute with root at
+.Cm remotedir
+or
+.Cm localdir .
+This means that all filenames begins with a
+.Ql "/" .
+.It Cm showconf Aq "yes | no"
+Spegla show the configuration before starting the mirroring if
+this option is set to yes.
+.br
+Defaults to yes
+.It Cm logfile Aq "log file"
+File to log to, can be either of stdout, stderr or a file.
+.br
+If
+.Ql "%s"
+is part of the name it will be replaced by the name of the
+last section defined as source for config.
+.br
+Defaults to stdout.
+.It Cm lockfile Aq "lock file"
+To make sure that not two instances of the same mirror is
+running at the same time.
+.br
+If
+.Ql "%s"
+is part of the name it will be replaced by the name of the
+last section defined as source for config.
+.It Cm retries Aq retries
+How many retries before quit.
+.br
+Defaults to 20.
+.It Cm retrytime Aq seconds
+How many seconds to wait before log in again after a timeout.
+.br
+Defaults to 150.
+.It Cm timeout Aq seconds
+How many seconds to wait to timeout.
+.br
+Defaults to 150.
+.It Cm port Aq "port number"
+Port to connect to.
+.br
+Defaults to 21.
+.It Cm passive Aq "yes | no"
+Whether to use passive mode or not.
+.br
+Defaults to yes.
+.It Cm maxdelete Aq "number of deletes"
+Maximum number of files to delete. If it exceeds that
+spegla quits.
+.br
+Defaults to 150.
+.\" .It Cm fastsync Aq "yes | no"
+.\" Whether to use ls -R on server instead of recursing every
+.\" directory. To be done.
+.\" .br
+.\" Defaults to no.
+.It Cm loglevel Aq "number"
+How detailed the logging should be.
+.br
+Defaults to 0.
+.It Cm tempdir Aq "directory"
+Where to store temporary files.
+.\" Unless using
+.\" .Cm fastsync
+.\" it's nothing to worry about.
+.br
+Defaults to /tmp.
+.It Cm treatasdir Aq "reg exp"
+Symlinks to be treated like if they where directories.
+.It Cm treatasdirdest Aq "reg exp"
+Symlinks that when being derefered matches this reg exp will be
+treated as if they was the directory they points at. This option
+is useful when you have links of the type
+.Ql "hej -> .1" .
+Observe that what the link points to will be expanded with the
+fully qualified filename with root at the root of the mirror.
+.It Cm minfree Aq "bytes"
+The minimum amount of required free space in
+.Cm destdir
+before
+.Cm spegla
+is started. If it's 0 no check is performed.
+.br
+Defaults to 0.
+.It Cm dodelete Aq "yes | no"
+.Cm Spegla
+will not delete any local files unless this parameter is set to yes.
+Local files will still be updated even if dodelete is set to no.
+.br
+Defaults to no
+.It Cm mirroruser Aq "user"
+Which effective user to run the mirroring as.
+.br
+Defaults to current user.
+.El
+.Pp
+Blank lines and text after
+.Ql "#"
+are ignored.
+.Sh SEE ALSO
+Consult the files spegla.conf and spegla.sh that are distributed together
+with spegla for an example of advanced use of spegla.
+.Sh FILES
+.Pa spegla.conf spegla.sh
+.Sh AUTHORS
+Jens A Nilsson <jnilsson@ludd.luth.se>
+.Sh BUGS
+This man page could describe some options a bit more in detail.
+.Pp
+Report bugs to jnilsson@ludd.luth.se

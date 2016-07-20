@@ -1,0 +1,29 @@
+[freebsd.org]
+version   = 1.1
+showconf  = yes
+#fastsync  = yes
+localdir  = /u0/jens/spegel
+remotedir = /pub/FreeBSD
+username  = anonymous
+password  = jnilsson@ludd.luth.se
+#host      = ftp.freebsd.ORG
+host      = ftp.sunet.se
+maxdelete = 0
+timeout   = 120
+retries   = 300       # busy ftp server and lots of files              
+                      # takes lots of hours to complete   
+                      # and don't want to quit when we are
+                      # almost finished.
+retrytime = 120       # if network goes down don't consume
+                      # all retries to fast
+logfile   = %s.log
+#logfile   = stderr
+lockfile  = %s.lock
+skip      = ^/incoming # no need for this.
+skip      = ^/mailing-lists
+skip      = ^/JDK
+skip      = /\.mirror$
+skip      = /snapshots$
+skip      = ^/.*updates/2.2.6-RELEASE
+skip      = /\.[0-9][0-9]*
+treatasdirdest = \./\.[0-9][0-9]*
