@@ -47,6 +47,9 @@ CPPFLAGS	+= -I/usr/local/include -DMEMDEBUG
 LDADD		+= -L/usr/local/lib -lmemdb
 .endif
 .endif
+.if defined(INET6)
+CFLAGS		+= -DINET6
+.endif
 
 .include <bsd.prog.mk>
 

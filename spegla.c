@@ -42,6 +42,7 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/mount.h>
+#include <sys/socket.h>
 
 #if defined(SunOS) || defined(Solaris) || defined(OSF1) || defined(ULTRIX)
 #	include <sys/time.h>
@@ -118,6 +119,7 @@ void set_mirror_uid(char *mirroruser);
 #define GO_MIRRORUSER		26
 #define GO_HELP				27
 #define GO_URL				28
+#define GO_FAMILY			29
 
 static struct get_opt go[] = {
 { GO_CONFIGFILE,		"configfile",		'f',	REQ_ARG },
@@ -151,6 +153,7 @@ static struct get_opt go[] = {
 { GO_MIRRORUSER,		"mirroruser",		'?',	REQ_ARG },
 { GO_HELP,				"help",				'?',	NO_ARG },
 { GO_URL,				"url",				'?',	REQ_ARG },
+{ GO_FAMILY,			"family",	'a',	REQ_ARG },
 { -1,NULL,0,NO_ARG}
 };
 
@@ -868,6 +871,54 @@ set_param_url(int option, const char *arg,
 	}
 }
 
+static void
+set_param_family(int option, const char *arg, int **var)
+{
+	int	family;
+	char	*f;
+
+	family = PF_UNSPEC;	/* Silent gcc */
+	if (strlen(arg) == 0 || strcmp(arg, "unspec") == 0)
+		family = PF_UNSPEC;
+	else if (strcmp(arg, "inet") == 0)
+		family = PF_INET;
+#ifdef INET6
+	else if (strcmp(arg, "inet6") == 0)
+		family = PF_INET6;
+#endif
+	else
+		e_errx(1, "%s's argument '%s' invalid", go[option].go_name, arg);
+
+	if (*var != NULL) {
+		if (!nowarn) {
+			switch (**var) {
+			case PF_UNSPEC:
+				f = "unspec";
+				break;
+			case PF_INET:
+				f = "inet";
+				break;
+#ifdef INET6
+			case PF_INET6:
+				f = "inet6";
+				break;
+#endif
+			default:
+				f = "unknown";
+				break;
+			}
+			e_warnx("overriding %s's value '%s' with '%s'",
+				go[option].go_name, f, arg);
+		}
+	} else {
+		*var = malloc(sizeof(family));
+		if (*var == NULL)
+			e_err(1, "malloc");
+	}
+		
+	**var = family;
+}
+
 /* ARGSUSED */
 static void
 add_param_sps(int option, const char *arg, struct cl_sps_que **q)
@@ -973,6 +1024,38 @@ default_num(const char *name, int **val, int num, int show)
 }
 
 static void
+default_family(const char *name, int **val, int num, int show)
+{
+	char *f;
+
+	if (*val == NULL) {
+		*val = malloc(sizeof(int));
+		if (*val == NULL)
+			e_err(1, "malloc");
+		**val = num;
+	}
+	if (show) {
+		switch (**val) {
+		case PF_UNSPEC:
+			f = "unspec";
+			break;
+		case PF_INET:
+			f = "inet";
+			break;
+#ifdef INET6
+		case PF_INET6:
+			f = "inet6";
+			break;
+#endif
+		default:
+			f = "unknown";
+			break;
+		}
+		e_warnx("%s = %s", name, f);
+	}
+}
+
+static void
 show_skip_map_fun(struct sp_skip *sps)
 {
 	e_warnx("skip = '%s'", sps->sps_name);
@@ -1023,6 +1106,7 @@ main(int argc, char * const *argv)
 		int		*timeout;
 		int		*retries;
 		int		*port;
+		int		*family;
 		int		*passive;
 		int		*retrytime;
 		int		*showconf;
@@ -1080,6 +1164,9 @@ main(int argc, char * const *argv)
 		}
 
 		switch(go[option].go_opt_num) {
+		case GO_FAMILY:
+			set_param_family(option, arg, &param.family);
+			break;
 		case GO_LOCALDIR:
 			set_param_str(option, arg, &param.localdir);
 			break;
@@ -1229,6 +1316,7 @@ main(int argc, char * const *argv)
 	default_num("timeout",	&param.timeout,		150,*param.showconf);
 	default_num("retries",	&param.retries,		20,	*param.showconf);
 	default_num("port",		&param.port,		21,	*param.showconf);
+	default_family("family",	&param.family,		PF_UNSPEC,	*param.showconf);
 	default_num("passive",	&param.passive,		1,	*param.showconf);
 	default_num("retrytime",&param.retrytime,	150,*param.showconf);
 	default_num("fastsync",	&param.fastsync,	0,	*param.showconf);
@@ -1303,8 +1391,9 @@ main(int argc, char * const *argv)
 	e_warnx("Spegla started at %s", ctime(&start_time));
 	e_warnx("Logging in to %s", param.host);
 	do {
-		c = ftp_login(param.host, *param.port, param.username,
-				param.password, fp_log_file, *param.loglevel);
+		c = ftp_login(param.host, *param.port, *param.family,
+				param.username, param.password,
+				fp_log_file, *param.loglevel);
 		if (c == NULL) {
 			if ((*param.retries)-- < 0)
 				e_errx(1, "I've retried enough now, quit");
@@ -1345,6 +1434,7 @@ main(int argc, char * const *argv)
 	SP_FREE(timeout);
 	SP_FREE(retries);
 	SP_FREE(port);
+	SP_FREE(family);
 	SP_FREE(passive);
 	SP_FREE(retrytime);
 	SP_FREE(showconf);

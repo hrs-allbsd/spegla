@@ -49,11 +49,11 @@ struct ftp_con {
 	int		ftp_com;
 	int		ftp_data;
 	int		ftp_listen;
+	int		ftp_family;
 	char	*ftp_remote_host;
 	char	*ftp_user_name;
 	char	*ftp_password;
 	char	*ftp_remote_dir;
-	char	*ftp_my_ip_comma;
 	FILE	*ftp_logfile;
 	char	ftp_buf[JFTP_BUF];
 	char	*ftp_tempdir;
@@ -84,7 +84,7 @@ struct ftp_con {
 
 
 /* Login on server, returns NULL on failure */
-struct ftp_con * ftp_login(char *host, int port, char *username,
+struct ftp_con * ftp_login(char *host, int port, int family, char *username,
 			char *password, FILE * logfile, int verbose);
 
 void ftp_unalloc(struct ftp_con *);
@@ -126,5 +126,11 @@ void	ftp_set_passive(struct ftp_con * c, int passive);
 
 /* specify where temp files should go */
 void	ftp_set_tempdir(struct ftp_con * c, char *tempdir);
+
+#ifndef INET6
+#if defined(__FreeBSD__) && __FreeBSD__ >= 4
+#define INET6
+#endif
+#endif
 
 #endif

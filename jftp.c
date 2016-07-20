@@ -131,6 +131,32 @@ char *ftp_dir2(struct ftp_con * c, const char *flags, const char *dir);
 #define E_LOG_4(level, fmt, a1, a2, a3, a4) \
 	e_log(level, "ftp: %s: " fmt, __FUNCTION__, a1, a2, a3, a4);
 
+#ifdef INET6
+/* translate IPv4 mapped IPv6 address to IPv4 address */
+static void
+unmappedaddr(struct sockaddr_in6 *sin6, int *len)
+{
+	struct sockaddr_in *sin4;
+	u_int32_t addr;
+	int port;
+
+	if (sin6->sin6_family != AF_INET6 ||
+	    !IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr))
+		return;
+	sin4 = (struct sockaddr_in *)sin6;
+	addr = *(u_int32_t *)&sin6->sin6_addr.s6_addr[12];
+	port = sin6->sin6_port;
+	memset(sin4, 0, sizeof(struct sockaddr_in));
+	sin4->sin_addr.s_addr = addr;
+	sin4->sin_port = port;
+	sin4->sin_family = AF_INET;
+#ifdef SIN6_LEN
+	sin4->sin_len = sizeof(struct sockaddr_in);
+#endif
+	*len = sizeof(struct sockaddr_in);
+}
+#endif
+
 void
 ftp_set_timeout_val(struct ftp_con *c, int n)
 {
@@ -304,11 +330,10 @@ io_err:
 }
 
 struct ftp_con *
-ftp_login(char *host, int port, char *username,
+ftp_login(char *host, int port, int family, char *username,
 	char *password, FILE * logfile, int verbose)
 {
 	struct	ftp_con *c;
-	struct	hostent *hp;
 
 	c = calloc((size_t)1, sizeof(*c));
 	if ((c->ftp_remote_host = strdup(host)) == NULL)
@@ -324,39 +349,12 @@ ftp_login(char *host, int port, char *username,
 	c->ftp_listen = -1;
 	c->ftp_data = -1;
 	c->ftp_port = port;
+	c->ftp_family = family;
 	c->ftp_retries = 20;
 	c->ftp_timeout = JFTP_TIMEOUT_VAL;
 	c->ftp_relogins = -1;
 	if ((c->ftp_tempdir = strdup(JFTP_DIR)) == NULL)
 		goto ret_bad;
-
-	/* init ftp_my_ip_comma used by ftp_port */
-	(void) gethostname(c->ftp_buf, sizeof(c->ftp_buf));
-	hp = gethostbyname(c->ftp_buf); /* XXX this isn't the best way */
-	if (hp == NULL) {
-		E_LOGX_1(0, "can't resolve my name: %s", c->ftp_buf);
-		c->ftp_resp = JFTP_CONFUSED;
-		goto ret_bad;
-	}
-	/* make sure we like the address */
-	if (hp->h_addrtype != AF_INET) {
-		E_LOGX_1(0, "wrong address type: %d", hp->h_addrtype);
-		goto ret_bad;
-	}
-	if (hp->h_length != 4) {
-		E_LOGX_1(0, "wrong address length: %d", hp->h_length);
-		goto ret_bad;
-	}
-	/* ip address with commas */
-	c->ftp_my_ip_comma = malloc((size_t)(3 * 4 + 3 + 1));
-	if (c->ftp_my_ip_comma == NULL) {
-		E_LOG(0, "malloc");
-		goto ret_bad;
-	}
-	(void) sprintf(c->ftp_my_ip_comma, "%d,%d,%d,%d",
-		(u_int8_t) hp->h_addr[0], (u_int8_t) hp->h_addr[1],
-		(u_int8_t) hp->h_addr[2], (u_int8_t) hp->h_addr[3]);
-
 
 	if (ftp_relogin(c) < 0)
 		goto ret_bad;
@@ -378,7 +376,6 @@ ftp_unalloc(struct ftp_con *c)
 	FC_FREE(ftp_remote_host);
 	FC_FREE(ftp_user_name);
 	FC_FREE(ftp_password);
-	FC_FREE(ftp_my_ip_comma);
 	FC_FREE(ftp_tempdir);
 	free(c);
 }
@@ -386,13 +383,47 @@ ftp_unalloc(struct ftp_con *c)
 int
 ftp_relogin(struct ftp_con *c)
 {
+#ifdef INET6
+	struct	addrinfo hints, *res0 = NULL, *res;
+	char	str_port[NI_MAXSERV];
+#else
 	struct	sockaddr_in server;
 	struct	hostent *hp;
+#endif
 
 	c->ftp_relogins++;
 	FD_CLOSE(c->ftp_com);
 	FD_CLOSE(c->ftp_listen);
 	FD_CLOSE(c->ftp_data);
+#ifdef INET6
+	snprintf(str_port, sizeof(str_port), "%d", c->ftp_port);
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = c->ftp_family;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_CANONNAME;
+	if (getaddrinfo(c->ftp_remote_host, str_port, &hints, &res0) != 0) {
+		E_LOGX_1(0, "getaddrinfo(%s): failed", c->ftp_remote_host);
+		c->ftp_resp = JFTP_ERR;
+		return -1;
+	}
+	c->ftp_com = -1;
+	for (res = res0; res; res = res->ai_next) {
+		c->ftp_com = socket(res->ai_family, res->ai_socktype,
+				    res->ai_protocol);
+		if (c->ftp_com < 0)
+			continue;
+		if (connect(c->ftp_com, res->ai_addr, res->ai_addrlen) >= 0)
+			break;
+		FD_CLOSE(c->ftp_com);
+		c->ftp_com = -1;
+	}
+	freeaddrinfo(res0);
+	if (c->ftp_com < 0) {
+		E_LOG(0, "connect");
+		c->ftp_resp = JFTP_ERR;
+		return -1;
+	}
+#else
 	c->ftp_com = socket(AF_INET, SOCK_STREAM, 0);
 	if (c->ftp_com < 0) {
 		E_LOG(0, "socket");
@@ -417,6 +448,7 @@ ftp_relogin(struct ftp_con *c)
 		c->ftp_resp = JFTP_ERR;
 		return -1;
 	}
+#endif
 	if (ftp_req(c, JFTP_RESPONSE) < 0 || c->ftp_resp != 220) {
 		E_LOGX_1(0, "unexpected greeting from server: %s", c->ftp_buf);
 		FD_CLOSE(c->ftp_com);
@@ -509,11 +541,43 @@ int
 ftp_port(struct ftp_con *c)
 {
 	char	*p, *a;
+#ifdef INET6
+	struct	sockaddr_storage sin2;
+	struct	sockaddr_in6 *sin6;
+	char	hname[INET6_ADDRSTRLEN];
+	u_char	addr[4];
+	int	port;
+#else
 	struct	sockaddr_in sin2;
+#endif
+	struct	sockaddr_in *sin4;
+	int	arg;
 	int     len, res;
 	int		a0, a1, a2, a3, p0, p1;
 
 	c->ftp_downloads++;
+
+	len = sizeof(sin2);
+	if (getsockname(c->ftp_com, (struct sockaddr *)&sin2, &len) == -1) {
+		E_LOG(0, "getsockname");
+		FD_CLOSE(c->ftp_com);
+		c->ftp_resp = JFTP_BROKEN;
+		return -1;
+	}
+	switch (((struct sockaddr *)&sin2)->sa_family) {
+	case AF_INET:
+		break;
+#ifdef INET6
+	case AF_INET6:
+		unmappedaddr((struct sockaddr_in6 *)&sin2, &len);
+		break;
+#endif
+	default:
+		E_LOG(0, "getsockname");
+		FD_CLOSE(c->ftp_com);
+		c->ftp_resp = JFTP_BROKEN;
+		return -1;
+	}
 
 	/* doing active ftp */
 	if (!c->ftp_passive) {
@@ -525,7 +589,8 @@ ftp_port(struct ftp_con *c)
 		}
 
 		/* create listen socket */
-		c->ftp_listen = socket(AF_INET, SOCK_STREAM, 0);
+		c->ftp_listen = socket(((struct sockaddr *)&sin2)->sa_family,
+				       SOCK_STREAM, 0);
 		if (c->ftp_listen < 0) {
 			E_LOGX(0, "socket");
 			c->ftp_listen = -1;
@@ -534,12 +599,27 @@ ftp_port(struct ftp_con *c)
 		}
 
 		/* bind socket */
-		(void) memset((void *) &sin2, 0, sizeof(sin2));
-		sin2.sin_family = AF_INET;
-		sin2.sin_addr.s_addr = htonl(INADDR_ANY);
-		sin2.sin_port = 0;
-		/* NOSTRICT sin2 */
-		if (bind(c->ftp_listen, (struct sockaddr *) &sin2, sizeof(sin2)) < 0) {
+		switch (((struct sockaddr *)&sin2)->sa_family) {
+		case AF_INET:
+			((struct sockaddr_in *)&sin2)->sin_port = 0;
+#ifdef IP_PORTRANGE
+			arg = IP_PORTRANGE_HIGH;
+			setsockopt(c->ftp_listen, IPPROTO_IP, IP_PORTRANGE,
+				   (char *)&arg, sizeof(arg));
+#endif
+			break;
+#ifdef INET6
+		case AF_INET6:
+			((struct sockaddr_in6 *)&sin2)->sin6_port = 0;
+#ifdef IPV6_PORTRANGE
+			arg = IPV6_PORTRANGE_HIGH;
+			setsockopt(c->ftp_listen, IPPROTO_IPV6, IPV6_PORTRANGE,
+				   (char *)&arg, sizeof(arg));
+#endif
+			break;
+#endif
+		}
+		if (bind(c->ftp_listen, (struct sockaddr *) &sin2, len) < 0) {
 			E_LOG(0, "bind");
 			c->ftp_resp = JFTP_BROKEN;
 			FD_CLOSE(c->ftp_listen);
@@ -568,9 +648,33 @@ ftp_port(struct ftp_con *c)
 		}
 	
 		/* do the port command */
-		res = ftp_req(c, "PORT %s,%d,%d", c->ftp_my_ip_comma,
-	    	((unsigned) ntohs(sin2.sin_port) >> 8) & 0xff,
-	    	ntohs(sin2.sin_port) & 0xff);
+		switch (((struct sockaddr *)&sin2)->sa_family) {
+		case AF_INET:
+			sin4 = (struct sockaddr_in *)&sin2;
+			a = (char *)&sin4->sin_addr.s_addr;
+			p = (char *)&sin4->sin_port;
+			res = ftp_req(c, "PORT %d,%d,%d,%d,%d,%d",
+				      a[0] & 0xff, a[1] & 0xff,
+				      a[2] & 0xff, a[3] & 0xff,
+				      p[0] & 0xff, p[1] & 0xff);
+			break;
+#ifdef INET6
+		case AF_INET6:
+			sin6 = (struct sockaddr_in6 *)&sin2;
+			if (getnameinfo((struct sockaddr *)&sin2, sin2.ss_len,
+					hname, sizeof(hname),
+					NULL, 0, NI_NUMERICHOST) != 0) {
+				E_LOG(0, "getnameinfo");
+				FD_CLOSE(c->ftp_listen);
+				FD_CLOSE(c->ftp_com);
+				c->ftp_resp = JFTP_BROKEN;
+				return -1;
+			}
+			res = ftp_req(c, "EPRT |%d|%s|%d|", 2, hname,
+				      htons(sin6->sin6_port));
+			break;
+#endif
+		}
 		if (res < 0 || c->ftp_resp != 200) {
 			if (res >= 0)
 				c->ftp_resp = JFTP_ERR;
@@ -579,29 +683,68 @@ ftp_port(struct ftp_con *c)
 		}
 		return 0;
 	} else { /* passive ftp */
-		res = ftp_req(c, "PASV");
-		if (res < 0 || c->ftp_resp != 227) {
-			if (res >= 0)
+		switch (((struct sockaddr *)&sin2)->sa_family) {
+		case AF_INET:
+			res = ftp_req(c, "PASV");
+			if (res < 0 || c->ftp_resp != 227) {
+				if (res >= 0)
+					c->ftp_resp = JFTP_ERR;
+				return -1;
+			}
+			for (p = c->ftp_buf; *p != '\0' && *p != '('; p++);
+			res = sscanf(p, "(%d,%d,%d,%d,%d,%d",
+				     &a0, &a1, &a2, &a3, &p0, &p1);
+			if (res != 6) {
 				c->ftp_resp = JFTP_ERR;
-			return -1;
+				return -1;
+			}
+			sin4 = (struct sockaddr_in *)&sin2;
+			/* NOSTRICT a */
+			a = (char *)&sin4->sin_addr.s_addr;
+			a[0] = a0 & 0xff;
+			a[1] = a1 & 0xff;
+			a[2] = a2 & 0xff;
+			a[3] = a3 & 0xff;
+			/* NOSTRICT p */
+			p = (char *)&sin4->sin_port;
+			p[0] = p0 & 0xff;
+			p[1] = p1 & 0xff;
+			sin4->sin_family = AF_INET;
+			break;
+#ifdef INET6
+		case AF_INET6:
+			res = ftp_req(c, "EPSV");
+			if (res < 0 || c->ftp_resp != 229) {
+				if (res >= 0)
+					c->ftp_resp = JFTP_ERR;
+				return -1;
+			}
+			for (p = c->ftp_buf; *p != '\0' && *p != '('; p++);
+			if (*p == '\0') {
+				c->ftp_resp = JFTP_ERR;
+				return -1;
+			}
+			++p;
+			res = sscanf(p, "%c%c%c%d%c", &addr[0], &addr[1],
+				     &addr[2], &port, &addr[3]);
+			if (res != 5 || addr[0] != addr[1] ||
+			    addr[0] != addr[2] || addr[0] != addr[3]) {
+				c->ftp_resp = JFTP_ERR;
+				return -1;
+			}
+			len = sizeof(sin2);
+			res = getpeername(c->ftp_com,
+					  (struct sockaddr *)&sin2, &len);
+			if (res == -1 || sin2.ss_family != AF_INET6) {
+				E_LOG(0, "getpeername");
+				c->ftp_resp = JFTP_BROKEN;
+				return -1;
+			}
+			sin6 = (struct sockaddr_in6 *)&sin2;
+			sin6->sin6_port = htons(port);
+			break;
+#endif
 		}
-		for (p = c->ftp_buf; *p != '\0' && *p != '('; p++);
-		res = sscanf(p, "(%d,%d,%d,%d,%d,%d", &a0, &a1, &a2, &a3, &p0, &p1);
-		if (res != 6) {
-			c->ftp_resp = JFTP_ERR;
-			return -1;
-		}
-		/* NOSTRICT a */
-		a = (char *)&sin2.sin_addr.s_addr;
-		a[0] = a0 & 0xff;
-		a[1] = a1 & 0xff;
-		a[2] = a2 & 0xff;
-		a[3] = a3 & 0xff;
-		/* NOSTRICT p */
-		p = (char *)&sin2.sin_port;
-		p[0] = p0 & 0xff;
-		p[1] = p1 & 0xff;
-		sin2.sin_family = AF_INET;
 
 		/* sanity check */
 		if (c->ftp_data != -1) {
@@ -610,7 +753,8 @@ ftp_port(struct ftp_con *c)
 				"data connection wasn't closed");
 		}
 		/* connect to server */
-		c->ftp_data = socket(AF_INET, SOCK_STREAM, 0);
+		c->ftp_data = socket(((struct sockaddr *)&sin2)->sa_family,
+				     SOCK_STREAM, 0);
 		if (c->ftp_data < 0) {
 			E_LOG(0, "socket");
 			c->ftp_resp = JFTP_ERR;
@@ -619,7 +763,7 @@ ftp_port(struct ftp_con *c)
 		(void)ftp_set_sock_opts(c, c->ftp_data);
 		if (connect(c->ftp_data, 
 				/* NOSTRICT sin2 */
-				(struct sockaddr *)&sin2, sizeof(sin2)) < 0) {
+				(struct sockaddr *)&sin2, len) < 0) {
 			E_LOG(0, "connect");
 			FD_CLOSE(c->ftp_data);
 			c->ftp_resp = JFTP_ERR;
