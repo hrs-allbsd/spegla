@@ -51,7 +51,10 @@
 #		define DAYSPERNYEAR 365
 #	endif
 #endif
+#if !(defined(__APPLE__) && defined(__clang__))
+/* On macOS with Clang a conflict with the OS headers arises */
 #include "strlcpy.h"
+#endif
 #include "parserow.h"
 #include "spegla.h"
 

@@ -12,7 +12,7 @@ SRCS		 = jftp.c parserow.c spegla.c tgetopt.c container.c spf_util.c	\
 			   regcomp.c regerror.c regexec.c regfree.c
 .if !(defined(HAVE_STRLCPY) && ${HAVE_STRLCPY} == "yes")
 SRCS		+= strlcpy.c
-CPPFLAGS	+= -DNO_STRLCPY
+#CPPFLAGS	+= -DNO_STRLCPY
 .endif
 
 MAN			 = spegla.1
