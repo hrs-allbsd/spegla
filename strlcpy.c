@@ -33,6 +33,7 @@
 
 #include "strlcpy.h"
 
+#if !(defined(__APPLE__) && defined(__clang__))
 /*
  * Copy src to string dst of size siz.  At most siz-1 characters
  * will be copied.  Always NUL terminates (unless siz == 0).
@@ -65,3 +66,4 @@ size_t strlcpy(dst, src, siz)
 
 	return(s - src - 1);	/* count does not include NUL */
 }
+#endif

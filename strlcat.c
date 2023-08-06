@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <string.h>
 
+#if !(defined(__APPLE__) && defined(__clang__))
 /*
  * Appends src to string dst of size siz (unlike strncat, siz is the
  * full size of dst, not space left).  At most siz-1 characters
@@ -66,3 +67,4 @@ size_t strlcat(dst, src, siz)
 
 	return(dlen + (s - src));	/* count does not include NUL */
 }
+#endif
