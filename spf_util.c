@@ -45,7 +45,8 @@
 #include <limits.h>
 #include <unistd.h>
 
-#ifdef NO_STRLCPY
+#if !(defined(__APPLE__) && defined(__clang__))
+/* On macOS with Clang a conflict with the OS headers arises */
 #include "strlcpy.h"
 #endif
 

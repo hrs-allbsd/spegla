@@ -67,7 +67,10 @@
 #include <signal.h>
 #include <pwd.h>
 
+#if !(defined(__APPLE__) && defined(__clang__))
+/* On macOS with Clang a conflict with the OS headers arises */
 #include "strlcpy.h"
+#endif
 #include "spegla.h"
 #include "parserow.h"
 #include "jftp.h"

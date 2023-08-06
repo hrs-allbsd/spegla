@@ -1,0 +1,40 @@
+#  $Id: Makefile.linux,v 1.5 1999/12/17 00:44:27 jens Exp $
+OBJS = spegla.o jftp.o parserow.o e_err.o tgetopt.o container.o \
+		que_syms.o spf_util.o strlcpy.o
+
+CC ?= gcc
+DEFS ?=
+CFLAGS = -c -Wall -g
+
+spegla: ${OBJS}
+	$(CC) -o spegla ${OBJS} ${LDFLAGS}
+
+parserow.o: parserow.c
+	$(CC) ${CFLAGS} parserow.c ${DEFS}
+
+spf_util.o: spf_util.c
+	$(CC) ${CFLAGS} spf_util.c ${DEFS}
+
+tgetopt.o: tgetopt.c
+	$(CC) ${CFLAGS} tgetopt.c ${DEFS}
+
+e_err.o: e_err.c
+	$(CC) ${CFLAGS} e_err.c ${DEFS}
+
+container.o: container.c
+	$(CC) ${CFLAGS} container.c ${DEFS}
+
+que_syms.o: que_syms.c
+	$(CC) ${CFLAGS} que_syms.c ${DEFS}
+
+strlcpy.o: strlcpy.c
+	$(CC) ${CFLAGS} strlcpy.c ${DEFS}
+
+jftp.o: jftp.c
+	$(CC) ${CFLAGS} jftp.c ${DEFS}
+
+spegla.o: spegla.c
+	$(CC) ${CFLAGS} spegla.c ${DEFS}
+
+clean: 
+	/bin/rm -f *.o spegla
